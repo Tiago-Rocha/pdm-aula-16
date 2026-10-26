@@ -2,71 +2,55 @@
 
 Repository for lesson 16 of PDM (Mobile Device Programming), CTeSP DAW, ESTA, University of the Azores, 2026/27.
 
-Tempo Açores with the islands from the course API (`https://api-pdm.sublimecipher.com`), now with user accounts: each person signs up and logs in inside the app, and the session survives closing the app.
+Tempo Açores with the islands from the course API (`https://api-pdm.sublimecipher.com`), now with user accounts: each person signs up and logs in inside the app, and the session survives closing the app. This is the code we walk through in the lesson; there are no exercises and no step branches.
 
 ```
 lib/
-  main.dart                          puts the pieces together
+  main.dart                          loads the settings, puts the pieces together
   models/
     island.dart                      Island
     forecast.dart                    WeatherType, DayForecast, Forecast
-    user.dart                        AppUser, Session               (step 1)
+    user.dart                        AppUser, Session
   data/
     api_client.dart                  HTTP: token, headers, status codes, JSON
     forecast_repository.dart         what the app can ask for (the interface)
     http_forecast_repository.dart    how: asks the API, returns Island
-    auth_repository.dart             login, register, refresh, logout (step 1)
-    session_store.dart               refresh token in secure storage (step 2)
+    auth_repository.dart             login, register, refresh, logout
+    session_store.dart               refresh token in secure storage
   state/
     forecast_notifier.dart           loading, error and islands
-    session_notifier.dart            who is logged in                (step 1)
-    settings.dart                    last email and theme            (step 3)
+    session_notifier.dart            who is logged in
+    settings.dart                    last email and theme (shared_preferences)
   screens/
-    islands_screen.dart              draws the state, calls load()
-    login_screen.dart                log in or create an account     (step 1)
+    islands_screen.dart              the islands, the theme button and logout
+    login_screen.dart                log in or create an account
 ```
 
-## Getting started
+## Running it
 
 ```bash
 git clone https://github.com/Tiago-Rocha/pdm-aula-16.git
 cd pdm-aula-16
 flutter pub get
-```
-
-Your `clientId` and `clientSecret` are in issue #1 of your `pdm-miniprojeto` repository (or, for the group project, in the issue of your group's repository). They go on the command line, never in the code and never in git:
-
-```bash
 flutter run -d chrome --dart-define=CLIENT_ID=pdm-ab12cd --dart-define=CLIENT_SECRET=your-secret
 ```
 
+Your `clientId` and `clientSecret` are in issue #1 of your `pdm-miniprojeto` repository (or, for the group project, in issue #1 of your group's repository). They go on the command line, never in the code and never in git. Pressing F5 in VS Code does not pass them.
+
 The accounts you create belong to the app of those credentials. An account made with your own credentials does not exist in your group's app, and the other way round.
 
-## The steps
+## The login, layer by layer
 
-There is one branch per step. `main` is the starting point; `passo-3` is the final state.
+1. `LoginScreen` validates the form and calls `login(email, password)` on the `SessionNotifier`.
+2. `SessionNotifier` sets `isLoading` and asks the `AuthRepository`.
+3. `AuthRepository` sends `POST /v1/auth/login` through the `ApiClient` (with the app's `clientId` and `clientSecret`, and the person's email and password).
+4. The answer comes back as JSON and becomes a `Session`: the user, a 15-minute access token and a 30-day refresh token.
+5. `SessionNotifier` saves the refresh token in the `SessionStore` (`flutter_secure_storage`).
+6. Only then does it put the session in its state and call `notifyListeners()`. `main.dart` sees the session and shows the islands instead of the login.
 
-| Step | Branch | What you do | In the app |
-|---|---|---|---|
-| 1 | `passo-1` | `AuthRepository` (`POST /v1/auth/login` and `/v1/auth/register`), `SessionNotifier` and `LoginScreen`. `main.dart` shows the login screen while there is no session (`TODO 1`). | A login screen with "Criar conta". After logging in, the islands and "Olá, name" at the top. Logout goes back to the login. |
-| 2 | `passo-2` | `SessionStore`: the refresh token in `flutter_secure_storage`. On start, `restore()` asks `POST /v1/auth/refresh` for a new session; logout calls `POST /v1/auth/logout` and deletes the token (`TODO 2`). | Close the app and open it again: you are still logged in. |
-| 3 | `passo-3` | `Settings` with `shared_preferences`, loaded before `runApp`: the last email used and the theme (`TODO 3`). | The login screen comes with your email filled in. The theme button stays as you left it. |
+On the next start, `restore()` reads the saved refresh token and asks `POST /v1/auth/refresh` for a new session. Logout deletes the token and calls `POST /v1/auth/logout`.
 
-To see what a step changed: `git diff main passo-1`, `git diff passo-1 passo-2`, `git diff passo-2 passo-3`.
-
-## Syncing with the lesson
-
-At the end of each step, finished or not, run the commands on the slide, one at a time, in a second terminal. They put aside what you wrote and give you the code of that step:
-
-```bash
-git stash -u
-git checkout passo-1
-flutter pub get
-```
-
-Then press `R` in the `flutter run` terminal (hot restart). For step 2, stop the app with `q` and run it again: a hot restart does not show that the session survives.
-
-To go back to the start: `git stash -u` and then `git checkout main`.
+To see it: log in, stop the app with `q` and run it again. You land on the islands. A hot restart (`R`) does not prove it.
 
 ## Where things are kept
 
@@ -75,9 +59,12 @@ To go back to the start: `git stash -u` and then `git checkout main`.
 | Refresh token | `flutter_secure_storage` (Keychain on iOS, Keystore on Android) | It is a password that lasts 30 days. |
 | Access token | memory only | It lasts 15 minutes; a new one comes from the refresh token. |
 | Last email, theme | `shared_preferences` | Small, not secret, needed on the first frame. |
-| Forecasts for offline use | a local database (drift, sqflite) | Lists and JSON that the app searches and replaces. |
+| Password | nowhere | The app sends it once and forgets it. |
+| Forecasts for offline use | a local database (drift, sqflite) | Lists and JSON that the app searches and replaces. Not in this repository. |
 
 On the web, `flutter_secure_storage` encrypts with WebCrypto and keeps the data in the browser; it is not as safe as the Keychain or the Keystore. Test the real thing on a phone or emulator.
+
+The texts on screen are in Portuguese, like the app in the project; the code and the comments are in English.
 
 API documentation: https://api-pdm.sublimecipher.com/docs
 
