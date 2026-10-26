@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/forecast_notifier.dart';
+import '../state/session_notifier.dart';
 
 /// Draws the state of the ForecastNotifier. Knows no URLs and no JSON.
 class IslandsScreen extends StatelessWidget {
@@ -10,8 +11,18 @@ class IslandsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final forecast = context.watch<ForecastNotifier>(); // rebuilds on notify
+    final user = context.watch<SessionNotifier>().user;
     return Scaffold(
-      appBar: AppBar(title: const Text('Tempo Açores')),
+      appBar: AppBar(
+        title: Text('Olá, ${user?.name ?? ''}'),
+        actions: [
+          IconButton(
+            tooltip: 'Terminar sessão',
+            icon: const Icon(Icons.logout),
+            onPressed: () => context.read<SessionNotifier>().logout(),
+          ),
+        ],
+      ),
       body: _body(context, forecast),
     );
   }
