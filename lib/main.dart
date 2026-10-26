@@ -9,16 +9,19 @@ import 'screens/islands_screen.dart';
 import 'screens/login_screen.dart';
 import 'state/forecast_notifier.dart';
 import 'state/session_notifier.dart';
+import 'state/settings.dart';
 
 const clientId = String.fromEnvironment('CLIENT_ID');
 const clientSecret = String.fromEnvironment('CLIENT_SECRET');
 
-/// TODO 3: remember the last email and the theme in shared_preferences.
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // before any plugin
+  final settings = await Settings.load();
   final api = ApiClient(clientId: clientId, clientSecret: clientSecret);
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider.value(value: settings),
         ChangeNotifierProvider(
           create: (_) =>
               SessionNotifier(AuthRepository(api), const SessionStore())
@@ -28,23 +31,32 @@ void main() {
           create: (_) => ForecastNotifier(HttpForecastRepository(api))..load(),
         ),
       ],
-      child: MaterialApp(
-        title: 'Tempo Açores',
-        theme: ThemeData(colorSchemeSeed: Colors.teal),
-        // While restoring, a spinner. Without a session, the login.
-        home: Consumer<SessionNotifier>(
-          builder: (context, session, _) {
-            if (session.isRestoring) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
-            return session.isLoggedIn
-                ? const IslandsScreen()
-                : const LoginScreen();
-          },
+      child: Consumer<Settings>(
+        builder: (context, settings, _) => MaterialApp(
+          title: 'Tempo Açores',
+          theme: ThemeData(colorSchemeSeed: Colors.teal),
+          darkTheme: ThemeData(
+            colorSchemeSeed: Colors.teal,
+            brightness: Brightness.dark,
+          ),
+          themeMode: settings.theme,
+          home: const _Home(),
         ),
       ),
     ),
   );
+}
+
+/// While restoring, a spinner. Without a session, the login.
+class _Home extends StatelessWidget {
+  const _Home();
+
+  @override
+  Widget build(BuildContext context) {
+    final session = context.watch<SessionNotifier>();
+    if (session.isRestoring) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    return session.isLoggedIn ? const IslandsScreen() : const LoginScreen();
+  }
 }

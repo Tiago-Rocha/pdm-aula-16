@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../state/forecast_notifier.dart';
 import '../state/session_notifier.dart';
+import '../state/settings.dart';
 
 /// Draws the state of the ForecastNotifier. Knows no URLs and no JSON.
 class IslandsScreen extends StatelessWidget {
@@ -16,6 +17,17 @@ class IslandsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text('Olá, ${user?.name ?? ''}'),
         actions: [
+          IconButton(
+            tooltip: 'Tema',
+            icon: const Icon(Icons.brightness_6),
+            onPressed: () {
+              final settings = context.read<Settings>();
+              final next = settings.theme == ThemeMode.dark
+                  ? ThemeMode.light
+                  : ThemeMode.dark;
+              settings.saveTheme(next);
+            },
+          ),
           IconButton(
             tooltip: 'Terminar sessão',
             icon: const Icon(Icons.logout),

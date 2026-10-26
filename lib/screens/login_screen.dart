@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/session_notifier.dart';
+import '../state/settings.dart';
 
 /// Log in, or create an account with the same form plus a name.
 class LoginScreen extends StatefulWidget {
@@ -14,7 +15,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _email = TextEditingController();
+  late final _email = TextEditingController(
+    text: context.read<Settings>().lastEmail, // filled in from the last time
+  );
   final _password = TextEditingController();
   bool _creating = false; // false: log in, true: create an account
 
@@ -30,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_form.currentState!.validate()) return;
     final session = context.read<SessionNotifier>();
     final email = _email.text.trim();
+    context.read<Settings>().saveLastEmail(email);
     if (_creating) {
       session.register(_name.text.trim(), email, _password.text);
     } else {
